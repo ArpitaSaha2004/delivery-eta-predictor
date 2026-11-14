@@ -1,0 +1,581 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delivery ETA Predictor</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #f3f6fa;
+            margin: 0;
+            padding: 20px;
+            color: #263445;
+        }
+
+        .container {
+            max-width: 850px;
+            margin: 10px auto;
+            background: white;
+            padding: 25px 35px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px #00000012;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 5px 0 8px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin: 0 0 20px;
+            font-size: 14px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px 22px;
+        }
+
+        .form-group {
+            min-width: 0;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 13px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 9px 11px;
+            height: 38px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            background-color: white;
+            color: #263445;
+            font-size: 14px;
+        }
+
+        input::placeholder {
+            color: #94a3b8;
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #2563eb;
+        }
+
+        input[type="number"] {
+            appearance: textfield;
+            -moz-appearance: textfield;
+        }
+
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        select {
+            appearance: none;
+            -webkit-appearance: none;
+            padding-right: 35px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23334155' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 15px;
+            cursor: pointer;
+        }
+
+        select:invalid {
+            color: #94a3b8;
+        }
+
+        .predict-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 20px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: bold;
+        }
+
+        .predict-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .predict-btn:disabled {
+            opacity: 0.65;
+            cursor: not-allowed;
+        }
+
+        /* Popup background */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Popup box */
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 380px;
+            padding: 35px 25px;
+            border-radius: 14px;
+            text-align: center;
+            box-shadow: 0 10px 40px #00000030;
+            animation: popup 0.25s ease;
+        }
+
+        .modal-icon {
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            background: #dbeafe;
+            color: #2563eb;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 15px;
+            font-size: 27px;
+        }
+
+        .modal-content h2 {
+            margin: 0 0 12px;
+            color: #263445;
+            font-size: 22px;
+        }
+
+        .modal-message {
+            font-size: 17px;
+            color: #2563eb;
+            font-weight: bold;
+            margin: 15px 0;
+            line-height: 1.5;
+        }
+
+        .close-btn {
+            margin-top: 15px;
+            padding: 11px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 7px;
+            width: 100%;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .close-btn:hover {
+            background: #1d4ed8;
+        }
+
+        @keyframes popup {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        /* Mobile layout */
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 22px 18px;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 23px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Delivery ETA Predictor</h1>
+
+    <p class="subtitle">
+        Estimate your food delivery time using Machine Learning.
+    </p>
+
+    <form id="etaForm">
+
+        <div class="form-grid">
+
+            <!-- Delivery Person Age -->
+            <div class="form-group">
+                <label for="age">Delivery Person Age</label>
+                <input
+                    id="age"
+                    type="number"
+                    name="Delivery_person_Age"
+                    min="19"
+                    max="60"
+                    step="1"
+                    placeholder="Enter age (19–60)"
+                    required
+                >
+            </div>
+
+            <!-- Delivery Person Rating -->
+            <div class="form-group">
+                <label for="rating">Delivery Person Rating</label>
+                <input
+                    id="rating"
+                    type="number"
+                    name="Delivery_person_Ratings"
+                    min="1"
+                    max="5"
+                    step="0.1"
+                    placeholder="Enter rating (1–5)"
+                    required
+                >
+            </div>
+
+            <!-- Delivery Distance -->
+            <div class="form-group">
+                <label for="distance">Delivery Distance (km)</label>
+                <input
+                    id="distance"
+                    type="number"
+                    name="Distance_km"
+                    min="0.01"
+                    max="50"
+                    step="0.01"
+                    placeholder="Enter distance (0.01–50 km)"
+                    required
+                >
+            </div>
+
+            <!-- Order Hour -->
+            <div class="form-group">
+                <label for="hour">Order Hour (0–23)</label>
+                <input
+                    id="hour"
+                    type="number"
+                    name="Order_Hour"
+                    min="0"
+                    max="23"
+                    step="1"
+                    placeholder="Enter order hour"
+                    required
+                >
+            </div>
+
+            <!-- Weekday -->
+            <div class="form-group">
+                <label for="weekday">Weekday</label>
+                <select id="weekday" name="Order_Weekday" required>
+                    <option value="" disabled selected>Select weekday</option>
+                    <option value="0">Monday</option>
+                    <option value="1">Tuesday</option>
+                    <option value="2">Wednesday</option>
+                    <option value="3">Thursday</option>
+                    <option value="4">Friday</option>
+                    <option value="5">Saturday</option>
+                    <option value="6">Sunday</option>
+                </select>
+            </div>
+
+            <!-- Weather -->
+            <div class="form-group">
+                <label for="weather">Weather</label>
+                <select id="weather" name="Weatherconditions" required>
+                    <option value="" disabled selected>Select weather</option>
+                    <option>Sunny</option>
+                    <option>Cloudy</option>
+                    <option>Fog</option>
+                    <option>Stormy</option>
+                    <option>Windy</option>
+                    <option>Sandstorms</option>
+                </select>
+            </div>
+
+            <!-- Road Traffic -->
+            <div class="form-group">
+                <label for="traffic">Road Traffic</label>
+                <select id="traffic" name="Road_traffic_density" required>
+                    <option value="" disabled selected>Select traffic</option>
+                    <option>Low</option>
+                    <option>Medium</option>
+                    <option>High</option>
+                    <option>Jam</option>
+                </select>
+            </div>
+
+            <!-- Vehicle Condition -->
+            <div class="form-group">
+                <label for="vehicle-condition">Vehicle Condition</label>
+                <select
+                    id="vehicle-condition"
+                    name="Vehicle_condition"
+                    required
+                >
+                    <option value="" disabled selected>Select condition</option>
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                </select>
+            </div>
+
+            <!-- Order Type -->
+            <div class="form-group">
+                <label for="order-type">Order Type</label>
+                <select id="order-type" name="Type_of_order" required>
+                    <option value="" disabled selected>Select order type</option>
+                    <option>Snack</option>
+                    <option>Meal</option>
+                    <option>Drinks</option>
+                    <option>Buffet</option>
+                </select>
+            </div>
+
+            <!-- Vehicle Type -->
+            <div class="form-group">
+                <label for="vehicle-type">Vehicle Type</label>
+                <select id="vehicle-type" name="Type_of_vehicle" required>
+                    <option value="" disabled selected>Select vehicle type</option>
+                    <option>motorcycle</option>
+                    <option>scooter</option>
+                    <option>electric_scooter</option>
+                    <option>bicycle</option>
+                </select>
+            </div>
+
+            <!-- Multiple Deliveries -->
+            <div class="form-group">
+                <label for="multiple">Multiple Deliveries</label>
+                <input
+                    id="multiple"
+                    type="number"
+                    name="multiple_deliveries"
+                    min="0"
+                    max="3"
+                    step="1"
+                    placeholder="Enter number (0–3)"
+                    required
+                >
+            </div>
+
+            <!-- Festival -->
+            <div class="form-group">
+                <label for="festival">Festival</label>
+                <select id="festival" name="Festival" required>
+                    <option value="" disabled selected>Select festival status</option>
+                    <option>No</option>
+                    <option>Yes</option>
+                </select>
+            </div>
+
+            <!-- City -->
+            <div class="form-group">
+                <label for="city">City</label>
+                <select id="city" name="City" required>
+                    <option value="" disabled selected>Select city</option>
+                    <option>Urban</option>
+                    <option>Metropolitian</option>
+                    <option>Semi-Urban</option>
+                </select>
+            </div>
+
+        </div>
+
+        <button
+            type="submit"
+            class="predict-btn"
+            id="predictBtn"
+        >
+            Predict Delivery Time
+        </button>
+
+    </form>
+
+</div>
+
+<!-- Prediction Popup -->
+<div
+    class="modal"
+    id="resultModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modalTitle"
+>
+    <div class="modal-content">
+
+        <div class="modal-icon" id="modalIcon">✓</div>
+
+        <h2 id="modalTitle">Prediction Successful!</h2>
+
+        <p class="modal-message" id="modalMessage"></p>
+
+        <button
+            type="button"
+            class="close-btn"
+            id="closeBtn"
+        >
+            Close
+        </button>
+
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById("resultModal");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalMessage = document.getElementById("modalMessage");
+    const modalIcon = document.getElementById("modalIcon");
+    const predictBtn = document.getElementById("predictBtn");
+
+    // Display popup
+    function showModal(title, message, icon = "✓") {
+        modalTitle.textContent = title;
+        modalMessage.textContent = message;
+        modalIcon.textContent = icon;
+        modal.style.display = "flex";
+    }
+
+    // Close popup
+    function closeModal() {
+        modal.style.display = "none";
+    }
+
+    document.getElementById("closeBtn").addEventListener(
+        "click",
+        closeModal
+    );
+
+    // Handle form submission
+    document.getElementById("etaForm").addEventListener(
+        "submit",
+        async function(e) {
+
+            e.preventDefault();
+
+            // Browser validation runs before this submit handler.
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+
+            // Convert numeric fields to numbers
+            for (const key of [
+                "Delivery_person_Age",
+                "Delivery_person_Ratings",
+                "Distance_km",
+                "Order_Hour",
+                "Order_Weekday",
+                "Vehicle_condition",
+                "multiple_deliveries"
+            ]) {
+                data[key] = Number(data[key]);
+            }
+
+            predictBtn.disabled = true;
+            predictBtn.textContent = "Predicting...";
+
+            showModal(
+                "Please wait",
+                "Calculating your estimated delivery time...",
+                "⏳"
+            );
+
+            try {
+
+                const response = await fetch("/predict-eta", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+
+                    const detail = Array.isArray(result.detail)
+                        ? result.detail.map(item => item.msg).join(", ")
+                        : (result.detail || "Prediction failed");
+
+                    throw new Error(detail);
+                }
+
+                showModal(
+                    "Prediction Successful!",
+                    "Estimated Delivery Time: " +
+                    result.predicted_delivery_time_minutes +
+                    " minutes",
+                    "✓"
+                );
+
+            } catch (error) {
+
+                showModal(
+                    "Something went wrong",
+                    error.message,
+                    "!"
+                );
+
+            } finally {
+
+                predictBtn.disabled = false;
+                predictBtn.textContent = "Predict Delivery Time";
+
+            }
+        }
+    );
+
+    // Close popup when clicking outside
+    modal.addEventListener("click", function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+
+    // Close popup with Escape key
+    document.addEventListener("keydown", function(e) {
+        if (e.key === "Escape") {
+            closeModal();
+        }
+    });
+</script>
+
+</body>
+</html>
