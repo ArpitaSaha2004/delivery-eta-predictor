@@ -1,4 +1,4 @@
-# Delivery ETA Predictor 🚚
+# Delivery ETA Predictor 
 
 A machine learning web application that predicts food delivery time based on delivery distance, weather, traffic, vehicle condition, and other order-related factors.
 
