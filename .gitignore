@@ -6,4 +6,5 @@ data/*.csv
 .venv/
 *.py[cod]
 .env
-notebooks/models/models/delivery_eta_model.pkl
+models/delivery_eta_model.pkl
+notebooks/models/
